@@ -1,0 +1,16 @@
+---
+- name: Terminate EC2 instance
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Terminate the EC2 instance
+      amazon.aws.ec2_instance:
+        instance_ids:
+          - i-xxxxxxxxxxxxxxxxx  # Replace with your EC2 instance ID
+        region: us-east-1  # Replace with the region where your EC2 instance is running
+        state: absent  # This will terminate the EC2 instance
+      register: ec2_termination
+
+    - name: Show termination result
+      debug:
+        var: ec2_termination
