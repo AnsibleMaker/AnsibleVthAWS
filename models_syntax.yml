@@ -1,0 +1,158 @@
+---
+- name: AWS Most Used Ansible Modules
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Launch an EC2 instance
+      amazon.aws.ec2_instance:
+        name: "my-instance"
+        key_name: "my-key-pair"
+        instance_type: "t2.micro"
+        image_id: "ami-xxxxxxxxx"  # Replace with an appropriate AMI ID
+        region: "us-east-1"
+        security_groups: "my-security-group"
+        wait: yes
+
+    - name: Create an S3 bucket
+      amazon.aws.s3_bucket:
+        name: "my-unique-bucket-name"
+        region: "us-east-1"
+        state: present
+
+    - name: Create an IAM user
+      amazon.aws.iam_user:
+        name: "my-new-user"
+        state: present
+        path: "/"
+
+    - name: Attach IAM policy to user
+      amazon.aws.iam_policy_attachment:
+        name: "my-policy-attachment"
+        users:
+          - "my-new-user"
+        policy_arn: "arn:aws:iam::aws:policy/AdministratorAccess"
+        state: present
+
+    - name: Create an RDS instance
+      amazon.aws.rds_instance:
+        db_instance_identifier: "my-db-instance"
+        engine: "mysql"
+        instance_class: "db.t2.micro"
+        allocated_storage: 20
+        db_name: "mydatabase"
+        master_username: "admin"
+        master_user_password: "adminpassword123"
+        region: "us-east-1"
+        state: present
+
+    - name: Create an EBS volume
+      amazon.aws.ec2_vol:
+        region: "us-east-1"
+        availability_zone: "us-east-1a"
+        size: 8
+        volume_type: "gp2"
+        state: present
+
+    - name: Create a VPC
+      amazon.aws.ec2_vpc_net:
+        cidr_block: "10.0.0.0/16"
+        region: "us-east-1"
+        state: present
+
+    - name: Create a security group
+      amazon.aws.ec2_security_group:
+        name: "my-security-group"
+        description: "My security group"
+        vpc_id: "vpc-xxxxxxxxx"
+        region: "us-east-1"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "0.0.0.0/0"
+        state: present
+
+    - name: Attach EBS volume to EC2 instance
+      amazon.aws.ec2_vol:
+        instance_id: "i-xxxxxxxxxx"
+        volume_id: "vol-xxxxxxxxxx"
+        device_name: "/dev/sdh"
+        state: attached
+
+    - name: Create a CloudWatch alarm
+      amazon.aws.cloudwatch_alarm:
+        name: "MyCPUUtilizationAlarm"
+        metric_name: "CPUUtilization"
+        namespace: "AWS/EC2"
+        statistic: "Average"
+        comparison: "<="
+        threshold: 10
+        period: 300
+        evaluation_periods: 1
+        alarm_actions:
+          - "arn:aws:sns:us-east-1:123456789012:MySNSTopic"
+        dimensions:
+          - name: "InstanceId"
+            value: "i-xxxxxxxxxx"
+        state: present
+
+    - name: Create an Elastic IP
+      amazon.aws.ec2_eip:
+        region: "us-east-1"
+        instance_id: "i-xxxxxxxxxx"
+        state: present
+
+    - name: Create an SQS queue
+      amazon.aws.sqs_queue:
+        name: "my-queue"
+        region: "us-east-1"
+        visibility_timeout: 60
+        state: present
+
+    - name: Launch an EC2 instance with a specific AMI and security group
+      amazon.aws.ec2_instance:
+        name: "WebServerInstance"
+        key_name: "webserver-key"
+        instance_type: "t2.micro"
+        image_id: "ami-xxxxxxxxx"
+        region: "us-west-2"
+        security_groups: "webserver-sg"
+        count: 1
+        assign_public_ip: yes
+        wait: yes
+        tags:
+          Name: "WebServer"
+
+    - name: Create an Auto Scaling Group
+      amazon.aws.asg:
+        name: "my-auto-scaling-group"
+        launch_config_name: "my-launch-config"
+        min_size: 1
+        max_size: 5
+        desired_capacity: 2
+        vpc_zone_identifier: "subnet-xxxxxxxx"
+        state: present
+        region: "us-west-2"
+
+    - name: Attach Elastic Load Balancer to Auto Scaling Group
+      amazon.aws.elb_target_group:
+        name: "my-target-group"
+        vpc_id: "vpc-xxxxxxxx"
+        protocol: "HTTP"
+        port: 80
+        state: present
+
+    - name: Create a Route 53 hosted zone
+      amazon.aws.route53_zone:
+        name: "example.com"
+        state: present
+        region: "us-east-1"
+
+    - name: Create a DynamoDB table
+      amazon.aws.dynamodb_table:
+        name: "my-table"
+        hash_key_name: "ID"
+        hash_key_type: "S"
+        read_capacity_units: 5
+        write_capacity_units: 5
+        state: present
