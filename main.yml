@@ -1,0 +1,25 @@
+---
+- name: Launch EC2 instance
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Launch an EC2 instance
+      amazon.aws.ec2_instance:
+        name: "firstamazonec2"
+        key_name: "ansible-key"  # Replace with your key name
+        instance_type: t2.micro  # You can modify the instance type
+        image_id: "ami-00127df3b22f11bc4"  # Replace with the AMI ID you want to use
+        region: us-east-1  # Specify the desired region
+        security_group: "sg-0328d30bb08f54aa5"  # Replace with your security group ID
+        subnet_id: "subnet-0c5952820c21762ba"  # Replace with your subnet ID
+        count: 1  # Number of instances to launch
+        wait: yes  # Wait for the instance to be up and running
+        network:
+          associate_public_ip_address: yes  # Assign a public IP to the instance
+        tags:
+          Name: "MyFirstAnsibleEC2"  # Use 'tags' instead of 'instance_tags'
+      register: ec2
+
+    - name: Show the EC2 instance details
+      debug:
+        var: ec2
