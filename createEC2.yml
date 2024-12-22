@@ -18,6 +18,7 @@
           associate_public_ip_address: yes  # Assign a public IP to the instance
         tags:
           Name: "MyFirstAnsibleEC2"  # Use 'tags' instead of 'instance_tags'
+        state: present
       register: ec2
 
     - name: Show the EC2 instance details
