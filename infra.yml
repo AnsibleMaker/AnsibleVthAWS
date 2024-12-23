@@ -1,0 +1,138 @@
+---
+- name : creating a vpc on AWS
+  hosts: localhost
+  vars:
+    cidr: "10.1.0.0/24"
+    loc: "us-east-1"
+    subnet:
+      pub : "10.1.0.0/25"
+      pvt : "10.1.0.128/25"
+
+  tasks:
+    - name: Creating VPC
+      amazon.aws.ec2_vpc_net:
+        name : "AMAZON-VPC-THROUGH-CODE"  #modify the name of the VPC
+        cidr_block: "{{ cidr}}"
+        region: "{{ loc}}"
+        state: present
+      register: vpc
+
+    - name: Debugging VPC object
+      debug:
+        var: vpc
+
+    - name: Debugging subnet.pub value
+      debug:
+        var: subnet.pub
+
+    - name: creating public subnet for the VPC
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{vpc.vpc.id}}"
+        cidr: "{{ subnet.pub }}"
+        region: "{{loc}}"
+        tags:
+          "name": "Public-subnet"
+      register: pub_sub
+
+    - name: creating Private subnet for the VPC
+      amazon.aws.ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc.vpc.id}}"
+        cidr: "{{ subnet.pvt }}"
+        region: "{{loc}}"
+        tags:
+          "name": "private-subnet"
+      register: pvt_sub
+
+    - name: creating IGW for the vpc
+      amazon.aws.ec2_vpc_igw:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{loc}}"
+        state: present
+        tags:
+          "name" : "VPC-IGW-CODE"
+      register: igw
+
+    - name: Debugging the public subnet object
+      debug:
+       var: pub_sub
+
+    - name: Debugging the private subnet object
+      debug:
+       var: pvt_sub
+
+    - name: Creating the public route tables
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        subnets: ["{{ pub_sub.subnet.id }}"]
+        region: "{{loc}}"
+        routes:
+         - dest: 0.0.0.0/0
+           gateway_id: "{{ igw.gateway_id }}"
+         - dest: ::/0
+           gateway_id: "{{ igw.gateway_id }}"
+        tags:
+          "name": "Public"
+      register: public_rt
+
+
+    - name: Creating the route tables
+      amazon.aws.ec2_vpc_route_table:
+        vpc_id: "{{ vpc.vpc.id }}"
+        region: "{{loc}}"
+        tags:
+          "name": "Private"
+        subnets: ["{{ pub_sub.subnet.id }}"]
+        routes:
+         - dest: "{{ cidr}}"
+           gateway_id: "local"
+      register: private_rt
+
+    - name: creating security group
+      amazon.aws.ec2_security_group:
+        name: "security-group-public"
+        description: "security grp"
+        vpc_id: "{{ vpc.vpc.id }}"
+        state: present
+        region: "{{loc}}"
+        rules:
+          # Ingress (Inbound) Rules
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: "0.0.0.0/0"  # Allow SSH from anywhere
+          - proto: tcp
+            from_port: 80
+            to_port: 80
+            cidr_ip: "0.0.0.0/0"  # Allow HTTP from anywhere
+          # Egress (Outbound) Rules
+          - proto: all
+            from_port: -1
+            to_port: -1
+            cidr_ip: "0.0.0.0/0"
+      register: security_group
+
+    - name: Creating EC2 machine
+      amazon.aws.ec2_instance:
+           name: "ec2_ansible"
+           instance_type: "t2.micro"
+           image_id: "ami-003d3d03cfe1b0468"
+           key_name: "ansible-key"
+           subnet_id: "{{ pub_sub.subnet.id }}"
+           security_group: "{{security_group.group_id}}"
+           state: present
+           region: "{{loc}}"
+           tags:
+             "ENV" : "TEST"
+      register: ec2
+
+
+    - name: debugging the outputs
+      debug:
+        msg: |
+          vpc id = {{ vpc.vpc.id }}
+          public subnet = {{ pub_sub.subnet.id }}
+          private subnet = {{ pvt_sub.subnet.id }}
+          Internet Gateway = {{ igw.gateway_id }}
+          EC2 Machine= {{ ec2.public_ip }}  # update if its not working 
