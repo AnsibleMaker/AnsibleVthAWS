@@ -1,0 +1,21 @@
+- name: Creating Users on AWS
+  vars:
+    user_list:
+      - suriya
+      - Sridhar
+      - Swapnil
+      - Meenakshi
+  tasks:
+    - name: Normalize usernames
+      set_fact:
+        normalized_users: "{{ user_list | map('lower') | map('regex_replace', '[^\\w+=,.@-]', '-') | list }}"
+    
+    - name: Debug normalized user list
+      debug:
+        var: normalized_users
+
+    - name: Create IAM users
+      amazon.aws.iam_user:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ normalized_users }}"
